@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Utilities;
 
-namespace Application.BezposrednieIntegration
+namespace BezposrednieIntegration
 {
     class BezposrednieIntegration : IWebSiteIntegration
     {

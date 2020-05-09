@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Utilities;
 
-namespace Application.BezposrednieIntegration
+namespace BezposrednieIntegration
 {
     class BezpostednieGetOfferDetails
     {

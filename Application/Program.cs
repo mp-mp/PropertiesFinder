@@ -2,6 +2,7 @@
 using Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using Utilities;
@@ -34,7 +35,7 @@ namespace SampleApp
                 //Tu następuje wykonywanie zrzutu ze strony internetowej
                 var newDump = webSiteIngegration.GenerateDump();
 
-                foreach(var oldDumpDetails in oldDumpsDetails)
+                foreach (var oldDumpDetails in oldDumpsDetails)
                 {
                     //Załaduj całego dumpa z pamięci wraz z ofertami
                     var oldDump = webSiteIngegration.DumpsRepository.GetDump(oldDumpDetails);
@@ -44,7 +45,7 @@ namespace SampleApp
                         .Except(
                             newDump.Entries,
                             webSiteIngegration.EntriesComparer))
-                    //...i oznacz je jako niekatualne
+                        //...i oznacz je jako niekatualne
                         closedEntry.OfferDetails.IsStillValid = false;
 
                     //Zapisz zmiany w dumpach do repozytorium
@@ -65,8 +66,11 @@ namespace SampleApp
             if (!interfaceType.GetTypeInfo().IsInterface)
                 throw new ArgumentException();
 
-            return AppDomain.CurrentDomain.GetAssemblies()
-                  .SelectMany(element => element.GetTypes())
+            var assemblies = new FileInfo(Uri.UnescapeDataString(new UriBuilder(Assembly.GetExecutingAssembly().CodeBase).Path))
+                .Directory.GetFiles().Where(file => file.Extension == ".dll")
+                .Select(dll => Assembly.LoadFile(dll.FullName));
+
+            return assemblies.SelectMany(element => element.GetTypes())
                   .Where(type => interfaceType.IsAssignableFrom(type)
                   && type.GetTypeInfo().IsClass);
         }

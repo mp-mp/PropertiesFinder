@@ -4,7 +4,7 @@ using System.Text;
 using Models;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Application.BezposrednieIntegration
+namespace BezposrednieIntegration
 {
     class BezposrednieComparer : IEqualityComparer<Entry>
     {
@@ -77,6 +77,5 @@ namespace Application.BezposrednieIntegration
             else result = Decimal.ToInt32(Convert.ToDecimal(input));
             return result;
         }
-
     }
 }
