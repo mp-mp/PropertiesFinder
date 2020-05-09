@@ -234,7 +234,7 @@ namespace Bazos
             string tempPageNumber = pageNumberInfo[1].Replace(" Wyświetlono 1-20 ogłoszeń z ", string.Empty);
             tempPageNumber = tempPageNumber.Replace(" ", string.Empty);
             var pageNumber = Convert.ToInt32(tempPageNumber) / 20;
-            for (int i = 0; i < 1; i++)//pageNumber +
+            for (int i = 0; i < pageNumber + 1; i++)
             {
                 HtmlWeb webNew = new HtmlWeb();
                 HtmlDocument docNew = webNew.Load(url + i*20 + "/");
