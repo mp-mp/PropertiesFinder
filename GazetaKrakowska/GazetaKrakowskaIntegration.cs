@@ -1,11 +1,11 @@
-using HtmlAgilityPack;
+Ôªøusing HtmlAgilityPack;
 using Interfaces;
 using Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Application.GazetaKrakowska
+namespace GazetaKrakowska
 {
     public class GazetaKrakowskaIntegration : IWebSiteIntegration
     {
@@ -72,7 +72,7 @@ namespace Application.GazetaKrakowska
 
         private List<GazetaKrakowskaOffer> GetOffersFromSinglePage(String address)
         {
-            var page = new HtmlDocument();
+            HtmlDocument page;
             try
             {
                 page = Web.Load(address);
@@ -137,8 +137,8 @@ namespace Application.GazetaKrakowska
             {
                 OfferDetails = CreateOfferDetails(offer, detailsPage),
                 PropertyPrice = CreatePropertyPrice(detailsPage, offerParameters),
-                PropertyDetails = CreatePropertyDetails(offerParameters),
-                PropertyAddress = CreatePropertyAddress(detailsPage),
+                PropertyDetails = CreatePropertyDetails(offerParameters, detailsPage),
+                PropertyAddress = CreatePropertyAddress(offerParameters),
                 PropertyFeatures = CreatePropertyFeatures(offerParameters),
                 RawDescription = GetNodeText(detailsPage.DocumentNode.SelectSingleNode("//*[@class=\"description\"]/div/section/div"))
             };
@@ -173,35 +173,38 @@ namespace Application.GazetaKrakowska
                 Url = offer.UrlDetails,
                 CreationDateTime = offer.CreationDateTime,
                 LastUpdateDateTime = offer.LastUpdateDateTime,
-                OfferKind = DetermineOfferKind(page.DocumentNode.SelectSingleNode("//*[@class=\"description\"]/div/section/div")),
+                OfferKind = DetermineOfferKind(page.DocumentNode.SelectSingleNode("//*[@class=\"priceInfo__value\"]/text()")),
                 SellerContact = CreateSellerContact(page),
                 IsStillValid = true
             };
         }
 
-        private OfferKind DetermineOfferKind(HtmlNode node)
+        private OfferKind DetermineOfferKind(HtmlNode totalGrossPrice)
         {
-            if (node != null && node.InnerText != null && node.InnerText.Contains("sprzed"))
-                return OfferKind.SALE;
-            return OfferKind.RENTAL;
+            if (SetPrice(totalGrossPrice) < 10000) return OfferKind.RENTAL; else return OfferKind.SALE;
         }
 
         private SellerContact CreateSellerContact(HtmlDocument page)
         {
             string name = null;
+            string telephone = null;
 
             if (page.DocumentNode.SelectSingleNode("//*[@id=\"contact_container\"]/div[1]/div/h3") != null)
             {
                 name = page.DocumentNode.SelectSingleNode("//*[@id=\"contact_container\"]/div[1]/div/h3").InnerText;
-            } else if (page.DocumentNode.SelectSingleNode("//*[@id=\"contact_container\"]/div[1]/div[2]/a[2]/h3") != null)
+            }
+            else if (page.DocumentNode.SelectSingleNode("//*[@id=\"contact_container\"]/div[1]/div[2]/a[2]/h3") != null)
             {
                 name = page.DocumentNode.SelectSingleNode("//*[@id=\"contact_container\"]/div[1]/div[2]/a[2]/h3").InnerText;
             }
 
+            if (page.DocumentNode.SelectSingleNode("//*[@class=\"phoneButton\"]/a") != null)
+                telephone = page.DocumentNode.SelectSingleNode("//*[@class=\"phoneButton\"]/a").GetAttributeValue("data-full-phone-number", "");
+
             return new SellerContact
             {
                 Email = null, // brak danych
-                Telephone = GetNodeText(page.DocumentNode.SelectSingleNode("//*[@class=\"phoneButton\"]/strong")),
+                Telephone = telephone,
                 Name = name
             };
         }
@@ -222,8 +225,8 @@ namespace Application.GazetaKrakowska
             propertyPrice.TotalGrossPrice = SetPrice(totalGrossPrice);
             propertyPrice.PricePerMeter = SetPrice(pricePerMeter);
 
-            if (offerParameters.GetValueOrDefault("Op≥aty (czynsz administracyjny, media)") != null)
-                propertyPrice.ResidentalRent = Decimal.Parse(GetAllDigits(offerParameters.GetValueOrDefault("Op≥aty (czynsz administracyjny, media)")));
+            if (offerParameters.GetValueOrDefault("Op≈Çaty (czynsz administracyjny, media)") != null)
+                propertyPrice.ResidentalRent = Decimal.Parse(GetAllDigits(offerParameters.GetValueOrDefault("Op≈Çaty (czynsz administracyjny, media)")));
 
             return propertyPrice;
         }
@@ -249,11 +252,11 @@ namespace Application.GazetaKrakowska
             return new String(value.Where(c => Char.IsDigit(c) || c == Char.Parse(",") || c == Char.Parse(".")).ToArray()).Trim();
         }
 
-        private PropertyDetails CreatePropertyDetails(Dictionary<String, String> offerParameters)
+        private PropertyDetails CreatePropertyDetails(Dictionary<String, String> offerParameters, HtmlDocument page)
         {
             var area = offerParameters.GetValueOrDefault("Powierzchnia w m2", null);
-            var numberOfRooms = offerParameters.GetValueOrDefault("Liczba pokoi", null);
-            var floorNumber = offerParameters.GetValueOrDefault("PiÍtro", null);
+            var numberOfRooms = offerParameters.GetValueOrDefault("Liczba pokoi", GetNumberOfRoomsFromTitle(page.DocumentNode.SelectSingleNode("//*[@class=\"sticker__title\"]")));
+            var floorNumber = offerParameters.GetValueOrDefault("Piƒôtro", null);
             var yearOfConstruction = offerParameters.GetValueOrDefault("Rok budowy", null);
 
             var propertyDetails = new PropertyDetails();
@@ -273,6 +276,19 @@ namespace Application.GazetaKrakowska
             return propertyDetails;
         }
 
+        private string GetNumberOfRoomsFromTitle(HtmlNode node)
+        {
+            string title = GetNodeText(node);
+
+            if (!String.IsNullOrWhiteSpace(title))
+            {
+                int index = title.IndexOf("pokoi");
+                return title.Substring(index - 2, 1);
+            }
+
+            return null;
+        }
+
         private string RemoveM2(string value)
         {
             return value.Replace("m2", "");
@@ -285,18 +301,36 @@ namespace Application.GazetaKrakowska
             return int.Parse(floor);
         }
 
-        private PropertyAddress CreatePropertyAddress(HtmlDocument page)
+        private PropertyAddress CreatePropertyAddress(Dictionary<String, String> offerParameters)
         {
-            // Wyglπda na to, øe gratka w jakiú sposÛb zablokowa≥a pobieranie adresu. Za kaødym razem odtrzymujÍ null - zarÛwno kiedy uøywam @class jak i @id
-            var addressProperties = page.DocumentNode.SelectSingleNode("//*[@class=\"presentationMap__address\"]");
-            var propertyAddress = new PropertyAddress(); 
+            var propertyAddress = new PropertyAddress();
 
-            if (addressProperties != null)
+            if (offerParameters.GetValueOrDefault("Lokalizacja", null) != null)
             {
-                // Metoda wywo≥ywana w przypadku otrzymania danych na temat adresu
+                string[] splittedLocation = offerParameters.GetValueOrDefault("Lokalizacja").Split(",");
+
+                if (splittedLocation.Length >= 1)
+                {
+                    string city = ChangeAllPolishSigns(splittedLocation[0].Trim()).ToUpper();
+                    propertyAddress.City = (PolishCity)Enum.Parse(typeof(PolishCity), city);
+                }
             }
 
             return propertyAddress;
+        }
+
+        private string ChangeAllPolishSigns(string value)
+        {
+            return value
+                .Replace("ƒÑ", "A").Replace("ƒÖ", "a")
+                .Replace("ƒÜ", "C").Replace("ƒá", "c")
+                .Replace("ƒò", "E").Replace("ƒô", "e")
+                .Replace("≈Å", "L").Replace("≈Ç", "l")
+                .Replace("≈É", "N").Replace("≈Ñ", "n")
+                .Replace("√ì", "O").Replace("√≥", "o")
+                .Replace("≈ö", "S").Replace("≈õ", "s")
+                .Replace("≈π", "Z").Replace("≈∫", "z")
+                .Replace("≈ª", "Z").Replace("≈º", "z");
         }
 
         private PropertyFeatures CreatePropertyFeatures(Dictionary<String, String> offerParameters)
@@ -310,15 +344,15 @@ namespace Application.GazetaKrakowska
 
             if (offerParameters.GetValueOrDefault("Miejsce parkingowe", null) != null)
             {
-                if (offerParameters.GetValueOrDefault("Miejsce parkingowe").Contains("przynaleøne na ulicy") || offerParameters.GetValueOrDefault("Miejsce parkingowe").Contains("pod wiatπ"))
+                if (offerParameters.GetValueOrDefault("Miejsce parkingowe").Contains("przynale≈ºne na ulicy") || offerParameters.GetValueOrDefault("Miejsce parkingowe").Contains("pod wiatƒÖ"))
                 {
                     if (offerParameters.GetValueOrDefault("Liczba miejsc parkingowych") != null)
                         propertyFeatures.OutdoorParkingPlaces = int.Parse(GetAllDigits(offerParameters.GetValueOrDefault("Liczba miejsc parkingowych")));
                     else
                         propertyFeatures.OutdoorParkingPlaces = 1;
                 }
-                    
-                if (offerParameters.GetValueOrDefault("Miejsce parkingowe").Contains("w garaøu") || offerParameters.GetValueOrDefault("Miejsce parkingowe").Contains("pod wiatπ"))
+
+                if (offerParameters.GetValueOrDefault("Miejsce parkingowe").Contains("w gara≈ºu") || offerParameters.GetValueOrDefault("Miejsce parkingowe").Contains("pod wiatƒÖ"))
                 {
                     if (offerParameters.GetValueOrDefault("Liczba miejsc parkingowych") != null)
                         propertyFeatures.IndoorParkingPlaces = int.Parse(GetAllDigits(offerParameters.GetValueOrDefault("Liczba miejsc parkingowych")));

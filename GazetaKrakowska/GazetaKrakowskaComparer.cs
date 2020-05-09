@@ -2,7 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Models;
 
-namespace Application.GazetaKrakowska
+namespace GazetaKrakowska
 {
     class GazetaKrakowskaComparer : IEqualityComparer<Entry>
     {
