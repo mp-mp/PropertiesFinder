@@ -10,12 +10,12 @@ namespace Models
         public string Url { get; set; }
 
         /// <summary>
-        /// Data stworzenia oferty - Brak na strone
+        /// Data stworzenia oferty
         /// </summary>
         public DateTime CreationDateTime { get; set; }
 
         /// <summary>
-        /// Data ostatniej aktualizacji oferty - Brak na strone
+        /// Data ostatniej aktualizacji oferty
         /// </summary>
         public DateTime? LastUpdateDateTime { get; set; }
 
@@ -30,7 +30,7 @@ namespace Models
         public SellerContact SellerContact { get; set; }
 
         /// <summary>
-        /// Czy oferta jest aktualna - nie ma nieaktualnych
+        /// Czy oferta jest aktualna
         /// </summary>
         public bool IsStillValid { get; set; }
     }
