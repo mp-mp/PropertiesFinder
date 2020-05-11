@@ -6,6 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Sample\**" />
+    <EmbeddedResource Remove="Sample\**" />
+    <None Remove="Sample\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <COMReference Include="{bee4bfec-6683-3e67-9167-3c0cbc68f40a}">
       <Guid>bee4bfec-6683-3e67-9167-3c0cbc68f40a</Guid>
       <VersionMajor>2</VersionMajor>
