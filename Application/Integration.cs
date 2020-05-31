@@ -39,6 +39,7 @@ namespace Application
 
         public Dump GenerateDump()
         {
+            
             List<Entry> listOfEntrys = new List<Entry>();
             listOfEntrys = GenerateDumpLogic(listOfEntrys, 1); //pobranie kupno
             listOfEntrys = GenerateDumpLogic(listOfEntrys, 2); //pobranie sprzedaż
@@ -48,6 +49,7 @@ namespace Application
             dataFromPage.DateTime = DateTime.Now;
             dataFromPage.WebPage = WebPage;
             dataFromPage.Entries = listOfEntrys;
+            
 
             return dataFromPage;
         }
